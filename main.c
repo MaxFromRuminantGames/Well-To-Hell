@@ -35,13 +35,13 @@ unsigned int bindTextureFromPNG(const char* filePath, unsigned int shaderProgram
 	unsigned int texture;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	
+
 	// set the texture wrapping/filtering options (on the currently bound texture object)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	
+
 	// load and generate the texture
 	int width, height, nrChannels;
 	stbi_set_flip_vertically_on_load(true);
@@ -77,10 +77,10 @@ unsigned int bindTextureFromMTL(const char *mtlPath, unsigned int shaderProgram)
 		printf("%s\n", errorInfo);
 		exit(1);
 	}
-	
+
 	char mtlBuffer[255];
 	while(fgets(mtlBuffer, 255, fpMtl) != NULL) { if(strncmp(mtlBuffer, "map_Kd ", 7) == 0) break; }
-	
+
 	char texName[255];
 	if(strncmp(mtlBuffer, "map_Kd ", 7) != 0)
 	{
@@ -91,7 +91,7 @@ unsigned int bindTextureFromMTL(const char *mtlPath, unsigned int shaderProgram)
 		fprintf(stderr, "ERROR::SHADER::PROGRAM::TEXTURE_NOT_FOUND\n");
 		exit(2);
 	}
-		
+
 	sscanf(mtlBuffer, "map_Kd %s", texName);
 	//strcat(texPath, texName);
 	fclose(fpMtl);
@@ -109,7 +109,7 @@ unsigned int importShaders(const char *vertexShaderPath, const char *fragmentSha
 		printf("%s\n", errorInfo);
 		exit(-1);
 	}
-	
+
 	FILE *pfFragmentShader = fopen(fragmentShaderPath, "r");
 	if(pfFragmentShader == NULL)
 	{
@@ -141,11 +141,11 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 
 	initMesh(outputMesh);
 
-    (*outputMesh).shader = shaderProgram;
+	(*outputMesh).shader = shaderProgram;
 
 	pFile = fopen (filename, "r");
 	if (pFile == NULL) perror ("Error opening file");
- 
+
 	while(fgets(mystring , 100 , pFile) != NULL)
 	{
 		if(strncmp(mystring, "mtllib ", 7) == 0)
@@ -153,7 +153,7 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 			char mtlName[255]; char mtlPath[255] = "./assets/models/";
 			sscanf(mystring, "mtllib %s", mtlName);
 			strcat(mtlPath, mtlName);
-		
+
 			(*outputMesh).texture = bindTextureFromMTL(mtlPath, (*outputMesh).shader);
 		}
 	}
@@ -161,7 +161,7 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 
 	//count the vertex number
 	while(fgets (mystring , 100 , pFile) != NULL)
-    {
+	{
 		if(strcmp(strtok (mystring," "),"v")==0) i++;
 	}
 
@@ -173,7 +173,7 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 
 	//count the faces number
 	while(fgets (mystring , 100 , pFile) != NULL)
-    {
+	{
 		if(strcmp(strtok (mystring," "),"f")==0) i++;
 	}
 
@@ -186,15 +186,15 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 
 	//parsing vertex
 	while(fgets (mystring , 100 , pFile) != NULL)
-    {
+	{
 		if(strcmp(strtok (mystring," "),"v")==0)
-        {
+		{
 			pch = strtok (NULL, " ");
 			if(pch!=NULL) (*outputMesh).vertices[i].pos.x=atof(pch);
 
 			pch = strtok (NULL, " ");
 			if(pch!=NULL) (*outputMesh).vertices[i].pos.y=atof(pch);
-			
+
 			pch = strtok (NULL, " ");
 			if(pch!=NULL) (*outputMesh).vertices[i].pos.z=atof(pch);
 
@@ -214,7 +214,7 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 
 	//parsing faces
 	while(fgets (mystring , 100 , pFile) != NULL)
-    {
+	{
 		if(strcmp(strtok (mystring," "),"f")==0){
 			pch = strtok(NULL, " ");
 			if(pch!=NULL) (*outputMesh).faces[j].x = atoi(pch);
@@ -231,32 +231,32 @@ void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgra
 	}
 
 	fclose (pFile);
-	
+
 	// create buffers/arrays
 	glGenVertexArrays(1, &(*outputMesh).VAO);
 	glGenBuffers(1, &(*outputMesh).VBO);
 	glGenBuffers(1, &(*outputMesh).EBO);
-	
+
 	glBindVertexArray((*outputMesh).VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, (*outputMesh).VBO);
 	glBufferData(GL_ARRAY_BUFFER, (*outputMesh).info.vertexCount * sizeof(vertex), &(*outputMesh).vertices[0], GL_STATIC_DRAW);  
-	
+
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (*outputMesh).EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (*outputMesh).info.faceCount * sizeof(vec3I), &(*outputMesh).faces[0], GL_STATIC_DRAW);
-	
+
 	// set the vertex attribute pointers
 	// vertex Positions
 	glEnableVertexAttribArray(0);	
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(offsetof(mesh, vertices) + offsetof(vertex, pos)));
-	
+
 	// color attribute
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(offsetof(mesh, vertices) + offsetof(vertex, color)));
-	
+
 	// vertex texture coords
 	glEnableVertexAttribArray(2);	
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(offsetof(mesh, vertices) + offsetof(vertex, texcoord)));
-	
+
 	glBindVertexArray(0);
 }
 
@@ -264,32 +264,32 @@ void drawMesh(mesh *objModel, camera *player)
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, objModel->texture);
-	
+
 	float model[16] = {
-	    1.0f, 0.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 0.0f, 1.0f
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
 	};
 
 	rotate4x4matrix(model, objModel->transform.rotX, objModel->transform.rotY, objModel->transform.rotZ);
 	translate4x4matrix(model, objModel->transform.posX, objModel->transform.posY, objModel->transform.posZ);
 
 	float camera[16] = {
-	    1.0f, 0.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 0.0f, 1.0f 
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f 
 	};
 
 	rotate4x4matrix(camera, -player->transform.rotX, -player->transform.rotY, 0.0f);
 	translate4x4matrix(camera, -player->transform.posX, -player->transform.posY, -player->transform.posZ);
 
 	float projection[16] = {
-	    1.0f, 0.0f, 0.0f, 0.0f,
-	    0.0f, 1.0f, 0.0f, 0.0f,
-	    0.0f, 0.0f, 1.0f, 0.0f,
-	    0.0f, 0.0f, 0.0f, 1.0f 
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f 
 	};
 
 	project4x4matrix(projection, player->fovDeg, player->nearPlane, player->farPlane);
@@ -357,30 +357,30 @@ int main()
 	glViewport(0, 0, 800, 600);
 
 	const char *vertexShaderSource =
-	    "#version 330 core\n"
-	    "layout (location = 0) in vec3 aPos;\n"
-	    "layout (location = 1) in vec3 aColor;\n"
-	    "layout (location = 2) in vec2 aTexCoord;\n"
-	    "out vec2 TexCoord;\n"
-	    "out vec3 ourColor;\n"
-	    "uniform mat4 model;\n"
-	    "uniform mat4 camera;\n"
-	    "uniform mat4 projection;\n"
-	    "void main()\n"
-	    "{\n"
-	    "\tgl_Position = projection * camera * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-	    "\tTexCoord = vec2(aTexCoord.x, 10.f - aTexCoord.y);\n"
-	    "\tourColor = vec3(aColor.x, aColor.y, aColor.z);\n"
-	    "}\n\0";
+		"#version 330 core\n"
+		"layout (location = 0) in vec3 aPos;\n"
+		"layout (location = 1) in vec3 aColor;\n"
+		"layout (location = 2) in vec2 aTexCoord;\n"
+		"out vec2 TexCoord;\n"
+		"out vec3 ourColor;\n"
+		"uniform mat4 model;\n"
+		"uniform mat4 camera;\n"
+		"uniform mat4 projection;\n"
+		"void main()\n"
+		"{\n"
+		"\tgl_Position = projection * camera * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+		"\tTexCoord = vec2(aTexCoord.x, 10.f - aTexCoord.y);\n"
+		"\tourColor = vec3(aColor.x, aColor.y, aColor.z);\n"
+		"}\n\0";
 	const char *fragmentShaderSource = "#version 330 core\n"
-	    "out vec4 FragColor;\n"
-	    "in vec3 ourColor;\n"
-	    "in vec2 TexCoord;\n"
-	    "uniform sampler2D texture1;\n"
-	    "void main()\n"
-	    "{\n"
-	    "\tFragColor = texture(texture1, TexCoord) * vec4(ourColor, 1.0);\n"
-	    "}\n\0";
+		"out vec4 FragColor;\n"
+		"in vec3 ourColor;\n"
+		"in vec2 TexCoord;\n"
+		"uniform sampler2D texture1;\n"
+		"void main()\n"
+		"{\n"
+		"\tFragColor = texture(texture1, TexCoord) * vec4(ourColor, 1.0);\n"
+		"}\n\0";
 
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -408,7 +408,7 @@ int main()
 		printf("%s", infoLog);
 		fprintf(stderr, "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n");
 		glfwTerminate();
-        	return -1;
+		return -1;
 	}
 
 	unsigned int shaderProgram = glCreateProgram();
@@ -428,48 +428,48 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	float vertices[] = {
-	     // positions         // colors           // texture coords
-	    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-	     0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	     0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	     0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		// positions         // colors           // texture coords
+		-0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
 
-	    -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-	     0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	     0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	     0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	    -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
 
-	    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	    -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-	    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
 
-	     0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	     0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	     0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	     0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	     0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-	     0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
 
-	    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
- 	     0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	     0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	     0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	    -0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-	    -0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
 
-	    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
-	     0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-	     0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	     0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
-	    -0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
-	    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f
 	};
 
 	unsigned int VBO, VAO;
@@ -488,7 +488,7 @@ int main()
 	// color attribute
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
-	
+
 	// texture coord attribute
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
@@ -496,13 +496,13 @@ int main()
 	unsigned int texture;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
-	
+
 	// set the texture wrapping/filtering options (on the currently bound texture object)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	
+
 	// load and generate the texture
 	int width, height, nrChannels;
 	stbi_set_flip_vertically_on_load(true);
@@ -552,12 +552,12 @@ int main()
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
-		
+
 		float model[16] = {
-		    1.0f, 0.0f, 0.0f, 0.0f,
-		    0.0f, 1.0f, 0.0f, 0.0f,
-		    0.0f, 0.0f, 1.0f, 0.0f,
-		    0.0f, 0.0f, 0.0f, 1.0f
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
 		};
 
 		rotDeg += 1.0f;
@@ -566,20 +566,20 @@ int main()
 		translate4x4matrix(model, 0.0f, 0.0f, -2.0f);
 
 		float camera[16] = {
-		    1.0f, 0.0f, 0.0f, 0.0f,
-		    0.0f, 1.0f, 0.0f, 0.0f,
-		    0.0f, 0.0f, 1.0f, 0.0f,
-		    0.0f, 0.0f, 0.0f, 1.0f 
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f 
 		};
 
 		translate4x4matrix(camera, -player.transform.posX, -player.transform.posY, -player.transform.posZ);
 		rotate4x4matrix(camera, -player.transform.rotX, -player.transform.rotY, 0.0f);
 
 		float projection[16] = {
-		    1.0f, 0.0f, 0.0f, 0.0f,
-		    0.0f, 1.0f, 0.0f, 0.0f,
-		    0.0f, 0.0f, 1.0f, 0.0f,
-		    0.0f, 0.0f, 0.0f, 1.0f 
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f 
 		};
 
 		project4x4matrix(projection, player.fovDeg, player.nearPlane, player.farPlane);
