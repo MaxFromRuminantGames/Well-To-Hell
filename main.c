@@ -260,9 +260,7 @@ int main()
 
 	float rotDeg = 90.0f;
 
-	mesh monke;
-	//initMesh(&monke);
-	importObj(&monke, "./assets/models/monke.obj", shaderProgram);
+	mesh monke = importObj("./assets/models/monke.obj", shaderProgram);
 
 	camera player = {
 		.fovDeg = 90.0f,
