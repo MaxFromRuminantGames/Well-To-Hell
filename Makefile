@@ -1,8 +1,10 @@
 CFLAGS = -g -O0 -Wall -Wextra
 LDFLAGS = -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm
 
+CLIBS = glad.c include/assetimport.c include/vecmath.c
+
 main: main.c
-	gcc $(CFLAGS) -o main main.c glad.c -Iinclude $(LDFLAGS)
+	gcc $(CFLAGS) -o main main.c $(CLIBS) -Iinclude $(LDFLAGS)
 
 .PHONY: clear test debug altfile win
 

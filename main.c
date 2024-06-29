@@ -8,16 +8,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#include <vecmath.h>
-
-typedef struct root
-{
-	float posX, posY, posZ;
-	float rotX, rotY, rotZ;
-} root;
+#include "include/vecmath.h"
+#include "include/assetimport.h"
 
 typedef struct camera
 {
@@ -25,240 +17,6 @@ typedef struct camera
 	float fovDeg;
 	float nearPlane, farPlane;
 } camera;
-
-typedef struct vertex { struct color { float r, g, b; } color; vec3 pos; vec2 texcoord; } vertex;
-typedef struct modelInfo { int vertexCount, faceCount; } modelInfo;
-typedef struct mesh { root transform; vertex *vertices; vec3I *faces; modelInfo info; unsigned int VBO, VAO, EBO, texture, shader; } mesh;
-
-unsigned int bindTextureFromPNG(const char* filePath, unsigned int shaderProgram)
-{
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	// set the texture wrapping/filtering options (on the currently bound texture object)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	// load and generate the texture
-	int width, height, nrChannels;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char *data = stbi_load(filePath, &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		char infoLog[255];
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		printf("%s", infoLog);
-		printf("%s", filePath);
-		fprintf(stderr, "ERROR::SHADER::PROGRAM::TEXTURE_NOT_FOUND\n");
-		exit(3);
-	}
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);	
-
-	return texture;
-}
-
-unsigned int bindTextureFromMTL(const char *mtlPath, unsigned int shaderProgram)
-{
-	FILE *fpMtl = fopen(mtlPath, "r");
-	if(fpMtl == NULL)
-	{
-		char errorInfo[255] = "Material not found: ";
-		strcat(errorInfo, mtlPath); strcat(errorInfo, "\n");
-		printf("%s\n", errorInfo);
-		exit(1);
-	}
-
-	char mtlBuffer[255];
-	while(fgets(mtlBuffer, 255, fpMtl) != NULL) { if(strncmp(mtlBuffer, "map_Kd ", 7) == 0) break; }
-
-	char texName[255];
-	if(strncmp(mtlBuffer, "map_Kd ", 7) != 0)
-	{
-		char infoLog[255];
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		printf("%s", infoLog);
-		printf("%s", mtlBuffer);
-		fprintf(stderr, "ERROR::SHADER::PROGRAM::TEXTURE_NOT_FOUND\n");
-		exit(2);
-	}
-
-	sscanf(mtlBuffer, "map_Kd %s", texName);
-	//strcat(texPath, texName);
-	fclose(fpMtl);
-
-	return bindTextureFromPNG(texName, shaderProgram);
-}
-
-unsigned int importShaders(const char *vertexShaderPath, const char *fragmentShaderPath)
-{
-	FILE *pfVertexShader = fopen(vertexShaderPath, "r");
-	if(pfVertexShader == NULL)
-	{
-		char errorInfo[255] = "Vertex Shader not found: ";
-		strcat(errorInfo, vertexShaderPath); strcat(errorInfo, "\n");
-		printf("%s\n", errorInfo);
-		exit(-1);
-	}
-
-	FILE *pfFragmentShader = fopen(fragmentShaderPath, "r");
-	if(pfFragmentShader == NULL)
-	{
-		char errorInfo[255] = "Vertex Shader not found: ";
-		strcat(errorInfo, fragmentShaderPath); strcat(errorInfo, "\n");
-		printf("%s\n", errorInfo);
-		exit(-1);
-	}
-
-	fclose(pfVertexShader);
-	fclose(pfFragmentShader);
-}
-
-void initMesh(mesh *outputMesh)
-{
-	(*outputMesh).vertices  = NULL;
-	(*outputMesh).faces     = NULL;
-
-	(*outputMesh).transform = (root){ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-}
-
-void importObj(mesh *outputMesh, const char *filename, unsigned int shaderProgram)
-{
-	FILE *pFile;
-	char mystring [100];
-	char *pch;
-	int i=0;
-	int j=0;
-
-	initMesh(outputMesh);
-
-	(*outputMesh).shader = shaderProgram;
-
-	pFile = fopen (filename, "r");
-	if (pFile == NULL) perror ("Error opening file");
-
-	while(fgets(mystring , 100 , pFile) != NULL)
-	{
-		if(strncmp(mystring, "mtllib ", 7) == 0)
-		{
-			char mtlName[255]; char mtlPath[255] = "./assets/models/";
-			sscanf(mystring, "mtllib %s", mtlName);
-			strcat(mtlPath, mtlName);
-
-			(*outputMesh).texture = bindTextureFromMTL(mtlPath, (*outputMesh).shader);
-		}
-	}
-	rewind(pFile);
-
-	//count the vertex number
-	while(fgets (mystring , 100 , pFile) != NULL)
-	{
-		if(strcmp(strtok (mystring," "),"v")==0) i++;
-	}
-
-	//total of vertex
-	(*outputMesh).info.vertexCount = i;
-	(*outputMesh).vertices = malloc(i * sizeof(vertex));
-	rewind(pFile);
-	i=0;
-
-	//count the faces number
-	while(fgets (mystring , 100 , pFile) != NULL)
-	{
-		if(strcmp(strtok (mystring," "),"f")==0) i++;
-	}
-
-	//total of faces
-	(*outputMesh).info.faceCount = i;
-	(*outputMesh).faces = malloc(i * sizeof(vertex));
-
-	rewind(pFile);
-	i=0;j=0;
-
-	//parsing vertex
-	while(fgets (mystring , 100 , pFile) != NULL)
-	{
-		if(strcmp(strtok (mystring," "),"v")==0)
-		{
-			pch = strtok (NULL, " ");
-			if(pch!=NULL) (*outputMesh).vertices[i].pos.x=atof(pch);
-
-			pch = strtok (NULL, " ");
-			if(pch!=NULL) (*outputMesh).vertices[i].pos.y=atof(pch);
-
-			pch = strtok (NULL, " ");
-			if(pch!=NULL) (*outputMesh).vertices[i].pos.z=atof(pch);
-
-			(*outputMesh).vertices[i].color.r = 1.0f;
-			(*outputMesh).vertices[i].color.g = 1.0f;
-			(*outputMesh).vertices[i].color.b = 1.0f;
-
-			(*outputMesh).vertices[i].texcoord.x = 0.0f;
-			(*outputMesh).vertices[i].texcoord.y = 0.0f;
-
-			i++;
-		}	
-	}
-
-	rewind(pFile);
-	i=0;
-
-	//parsing faces
-	while(fgets (mystring , 100 , pFile) != NULL)
-	{
-		if(strcmp(strtok (mystring," "),"f")==0){
-			pch = strtok(NULL, " ");
-			if(pch!=NULL) (*outputMesh).faces[j].x = atoi(pch);
-
-			pch = strtok(NULL, " ");
-			if(pch!=NULL) (*outputMesh).faces[j].y = atoi(pch);
-
-			pch = strtok(NULL, " ");
-			if(pch!=NULL) (*outputMesh).faces[j].z = atoi(pch);
-
-			i=0;
-			j++;
-		}	
-	}
-
-	fclose (pFile);
-
-	// create buffers/arrays
-	glGenVertexArrays(1, &(*outputMesh).VAO);
-	glGenBuffers(1, &(*outputMesh).VBO);
-	glGenBuffers(1, &(*outputMesh).EBO);
-
-	glBindVertexArray((*outputMesh).VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, (*outputMesh).VBO);
-	glBufferData(GL_ARRAY_BUFFER, (*outputMesh).info.vertexCount * sizeof(vertex), &(*outputMesh).vertices[0], GL_STATIC_DRAW);  
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (*outputMesh).EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (*outputMesh).info.faceCount * sizeof(vec3I), &(*outputMesh).faces[0], GL_STATIC_DRAW);
-
-	// set the vertex attribute pointers
-	// vertex Positions
-	glEnableVertexAttribArray(0);	
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(offsetof(mesh, vertices) + offsetof(vertex, pos)));
-
-	// color attribute
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(offsetof(mesh, vertices) + offsetof(vertex, color)));
-
-	// vertex texture coords
-	glEnableVertexAttribArray(2);	
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (void*)(offsetof(mesh, vertices) + offsetof(vertex, texcoord)));
-
-	glBindVertexArray(0);
-}
 
 void drawMesh(mesh *objModel, camera *player)
 {
@@ -493,36 +251,7 @@ int main()
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	// set the texture wrapping/filtering options (on the currently bound texture object)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	// load and generate the texture
-	int width, height, nrChannels;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char *data = stbi_load("./assets/textures/missing texture.png", &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		printf("%s", infoLog);
-		fprintf(stderr, "ERROR::SHADER::PROGRAM::TEXTURE_NOT_FOUND\n");
-		glfwTerminate();
-		return -1;
-	}
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);	
+	unsigned int texture = bindTextureFromPNG("./assets/textures/missing texture.png", shaderProgram);
 
 	// uncomment this call to draw in wireframe polygons.
 	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -622,8 +351,6 @@ int main()
 
 	free(monke.vertices);
 	free(monke.faces);
-
-	stbi_image_free(data);
 
 	glfwTerminate();
 	return 0;
